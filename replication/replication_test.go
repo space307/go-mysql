@@ -12,8 +12,8 @@ import (
 
 	. "github.com/pingcap/check"
 	uuid "github.com/satori/go.uuid"
-	"github.com/siddontang/go-mysql/client"
-	"github.com/siddontang/go-mysql/mysql"
+	"github.com/space307/go-mysql/client"
+	"github.com/space307/go-mysql/mysql"
 )
 
 // Use docker mysql to test, mysql is 3306, mariadb is 3316
@@ -367,6 +367,12 @@ func (t *testSyncerSuite) TestMariadbGTIDSync(c *C) {
 	c.Assert(err, IsNil)
 
 	t.testSync(c, s)
+}
+
+func (t *testSyncerSuite) TestMariadbAnnotateRows(c *C) {
+	t.setupTest(c, mysql.MariaDBFlavor)
+	t.b.cfg.DumpCommandFlag = BINLOG_SEND_ANNOTATE_ROWS_EVENT
+	t.testPositionSync(c)
 }
 
 func (t *testSyncerSuite) TestMysqlSemiPositionSync(c *C) {

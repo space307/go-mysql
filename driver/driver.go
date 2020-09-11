@@ -9,16 +9,16 @@ import (
 	"io"
 	"strings"
 
-	"github.com/juju/errors"
-	"github.com/siddontang/go-mysql/client"
-	"github.com/siddontang/go-mysql/mysql"
+	"github.com/pingcap/errors"
 	"github.com/siddontang/go/hack"
+	"github.com/space307/go-mysql/client"
+	"github.com/space307/go-mysql/mysql"
 )
 
 type driver struct {
 }
 
-// DSN user:password@addr[?db]
+// Open: DSN user:password@addr[?db]
 func (d driver) Open(dsn string) (sqldriver.Conn, error) {
 	lastIndex := strings.LastIndex(dsn, "@")
 	seps := []string{dsn[:lastIndex], dsn[lastIndex+1:]}

@@ -9,8 +9,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/siddontang/go-mysql/canal"
-	"github.com/siddontang/go-mysql/mysql"
+	"github.com/space307/go-mysql/canal"
+	"github.com/space307/go-mysql/mysql"
 )
 
 var host = flag.String("host", "127.0.0.1", "MySQL host")
@@ -56,7 +56,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	if len(*ignoreTables) == 0 {
+	if len(*ignoreTables) > 0 {
 		subs := strings.Split(*ignoreTables, ",")
 		for _, sub := range subs {
 			if seps := strings.Split(sub, "."); len(seps) == 2 {

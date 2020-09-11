@@ -4,7 +4,7 @@ import (
 	"sync"
 
 	"github.com/siddontang/go-log/log"
-	"github.com/siddontang/go-mysql/mysql"
+	"github.com/space307/go-mysql/mysql"
 )
 
 type masterInfo struct {
@@ -26,7 +26,7 @@ func (m *masterInfo) Update(pos mysql.Position) {
 }
 
 func (m *masterInfo) UpdateTimestamp(ts uint32) {
-	log.Debugf("update master timestamp %s", ts)
+	log.Debugf("update master timestamp %d", ts)
 
 	m.Lock()
 	m.timestamp = ts

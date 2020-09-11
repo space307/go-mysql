@@ -9,6 +9,7 @@ import (
 	"github.com/space307/go-mysql/packet"
 )
 
+//Authentificator custom auth
 type Authentificator interface {
 	UserPass(string) (string, error)
 }
@@ -19,15 +20,17 @@ type Authentificator interface {
 type Conn struct {
 	*packet.Conn
 
-	capability uint32
+	serverConf     *Server
+	capability     uint32
+	authPluginName string
+	connectionID   uint32
+	status         uint16
+	salt           []byte // should be 8 + 12 for auth-plugin-data-part-1 and auth-plugin-data-part-2
 
-	connectionID uint32
-
-	status uint16
-
-	user string
-
-	salt []byte
+	credentialProvider  Authentificator
+	user                string
+	password            string
+	cachingSha2FullAuth bool
 
 	h Handler
 
@@ -39,22 +42,29 @@ type Conn struct {
 
 var baseConnID uint32 = 10000
 
+// NewConn: create connection with default server settings
 func NewConn(conn net.Conn, auth Authentificator, h Handler) (*Conn, error) {
-	c := new(Conn)
+	salt, _ := RandomBuf(20)
 
-	c.h = h
-	
-	c.Conn = packet.NewConn(conn)
+	var packetConn *packet.Conn
+	if defaultServer.tlsConfig != nil {
+		packetConn = packet.NewTLSConn(conn)
+	} else {
+		packetConn = packet.NewConn(conn)
+	}
 
-	c.connectionID = atomic.AddUint32(&baseConnID, 1)
-
-	c.stmts = make(map[uint32]*Stmt)
-
-	c.salt, _ = RandomBuf(20)
-
+	c := &Conn{
+		Conn:               packetConn,
+		serverConf:         defaultServer,
+		credentialProvider: auth,
+		h:                  h,
+		connectionID:       atomic.AddUint32(&baseConnID, 1),
+		stmts:              make(map[uint32]*Stmt),
+		salt:               salt,
+	}
 	c.closed.Set(false)
 
-	if err := c.handshake(auth); err != nil {
+	if err := c.handshake(); err != nil {
 		c.Close()
 		return nil, err
 	}
@@ -62,14 +72,45 @@ func NewConn(conn net.Conn, auth Authentificator, h Handler) (*Conn, error) {
 	return c, nil
 }
 
-func (c *Conn) handshake(auth Authentificator) error {
+// NewCustomizedConn: create connection with customized server settings
+func NewCustomizedConn(conn net.Conn, serverConf *Server, auth Authentificator, h Handler) (*Conn, error) {
+	var packetConn *packet.Conn
+	if serverConf.tlsConfig != nil {
+		packetConn = packet.NewTLSConn(conn)
+	} else {
+		packetConn = packet.NewConn(conn)
+	}
+
+	salt, _ := RandomBuf(20)
+	c := &Conn{
+		Conn:               packetConn,
+		serverConf:         serverConf,
+		credentialProvider: auth,
+		h:                  h,
+		connectionID:       atomic.AddUint32(&baseConnID, 1),
+		stmts:              make(map[uint32]*Stmt),
+		salt:               salt,
+	}
+	c.closed.Set(false)
+
+	if err := c.handshake(); err != nil {
+		c.Close()
+		return nil, err
+	}
+
+	return c, nil
+}
+
+func (c *Conn) handshake() error {
 	if err := c.writeInitialHandshake(); err != nil {
 		return err
 	}
 
-	if err := c.readHandshakeResponse(auth); err != nil {
+	if err := c.readHandshakeResponse(); err != nil {
+		if err == ErrAccessDenied {
+			err = NewDefaultError(ER_ACCESS_DENIED_ERROR, c.user, c.LocalAddr().String(), "Yes")
+		}
 		c.writeError(err)
-
 		return err
 	}
 

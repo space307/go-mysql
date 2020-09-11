@@ -3,8 +3,8 @@ package failover
 import (
 	"fmt"
 
-	"github.com/siddontang/go-mysql/client"
-	. "github.com/siddontang/go-mysql/mysql"
+	"github.com/space307/go-mysql/client"
+	. "github.com/space307/go-mysql/mysql"
 )
 
 type User struct {
@@ -142,7 +142,7 @@ func (s *Server) UnlockTables() error {
 	return err
 }
 
-// Get current binlog filename and position read from master
+// FetchSlaveReadPos gets current binlog filename and position read from master
 func (s *Server) FetchSlaveReadPos() (Position, error) {
 	r, err := s.SlaveStatus()
 	if err != nil {
@@ -155,7 +155,7 @@ func (s *Server) FetchSlaveReadPos() (Position, error) {
 	return Position{Name: fname, Pos: uint32(pos)}, nil
 }
 
-// Get current executed binlog filename and position from master
+// FetchSlaveExecutePos gets current executed binlog filename and position from master
 func (s *Server) FetchSlaveExecutePos() (Position, error) {
 	r, err := s.SlaveStatus()
 	if err != nil {
